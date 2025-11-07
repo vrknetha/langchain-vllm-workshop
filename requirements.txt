@@ -1,0 +1,11 @@
+# Core LLM and Agent Framework
+langchain>=1.0.0
+langchain-community>=0.3.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+
+# MCP Protocol for connecting to MCP servers
+langchain-mcp-adapters>=0.1.0
+
+# Additional dependencies
+requests>=2.31.0
