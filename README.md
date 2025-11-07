@@ -40,6 +40,11 @@ cd langchain-vllm
 ### 2. Install Dependencies
 
 ```bash
+uv pip install -r requirements.txt
+```
+
+Or with pip:
+```bash
 pip install -r requirements.txt
 ```
 
