@@ -57,12 +57,22 @@ cp .env.example .env
 
 ### 4. Deploy vLLM on RunPod
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+**Option A: Use Pre-built Docker Image (Fastest):**
 
-**Quick option:**
+1. Go to RunPod Console → Deploy Pod
+2. Select GPU (A4000 or better recommended)
+3. Under "Container Image", enter: `vrknetha/langchain-vllm-workshop:latest`
+4. Set Container Disk: 50GB+
+5. Expose port: 8000
+6. Deploy and wait for startup
+7. Copy the endpoint URL to `.env`
+
+**Option B: Manual Setup:**
 1. Deploy a RunPod pod with PyTorch template
 2. SSH in and run `./start_vllm.sh`
 3. Copy the endpoint URL to `.env`
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 
 ### 5. Run the Workshop
 
