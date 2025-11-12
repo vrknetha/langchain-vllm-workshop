@@ -1,32 +1,39 @@
-# LangChain v1 + vLLM Workshop: AI Job Application Assistant
+# LangGraph + vLLM: Research Assistant with Memory
 
-A hands-on workshop demonstrating how to build intelligent agents using LangChain v1, vLLM, and Model Context Protocol (MCP).
+An intelligent research assistant built with LangGraph, featuring persistent short-term memory powered by SQLite and vLLM inference.
 
 ## Overview
 
-This workshop teaches you to build an AI agent that helps students with job applications:
-- **Find real jobs** by scraping live job boards using Firecrawl MCP
-- **Score resume fit** by analyzing skills match
-- **Generate personalized cover letters** tailored to each role
-- **Make intelligent decisions** using autonomous multi-step reasoning
+This project demonstrates a stateful AI agent with conversation memory:
+- **Persistent Memory** - Platform-managed persistence with configurable backends
+- **Multi-turn Reasoning** - Maintains context across conversation turns
+- **Web Research Tools** - Search and scrape capabilities via Firecrawl MCP
+- **Live API + Chat UI** - Built-in LangGraph Studio interface
+- **Production-ready** - vLLM backend for fast inference
 
 ## Key Technologies
 
-- **LangChain v1** - Modern agent framework with `create_agent()`
+- **LangGraph** - State machine framework with built-in memory
+- **Platform-managed Persistence** - Automatic conversation storage
 - **vLLM** - Fast LLM inference on GPUs (4-24x faster than HuggingFace)
 - **Hermes-2-Pro-Mistral-7B** - 7B parameter model with excellent tool calling
 - **Firecrawl MCP** - Production web scraping via Model Context Protocol
-- **RunPod** - GPU infrastructure for vLLM deployment
+- **LangGraph CLI** - Built-in API server and Studio UI
 
 ## Architecture
 
 ```
-User Query → vLLM Agent → MCP Tools → Real Job Data
-                ↓
-        [Firecrawl Scraping | LLM Reasoning | Response Generation]
+User Query → LangGraph Agent → [Memory Check] → vLLM + Tools → Response
+                                      ↓
+                              SQLite Checkpointer
+                              (Persistent Memory)
 ```
 
-**Key Design Principle:** The agent receives MCP tools directly and uses its intelligence to decide when/how to use them. No unnecessary wrapper functions!
+**Key Features:**
+- **Stateful Conversations** - Every message is saved with platform persistence
+- **Thread-based Memory** - Multiple concurrent conversations with separate memory
+- **Multi-turn Reasoning** - Agent remembers context from previous turns
+- **Tool Integration** - Web search and scraping via Firecrawl MCP
 
 ## Quick Start
 
@@ -74,90 +81,221 @@ cp .env.example .env
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 
-### 5. Run the Workshop
+### 5. Start the LangGraph Server
 
+**For Development (In-Memory, Hot Reload):**
 ```bash
-jupyter notebook lanchain-vllm.ipynb
+langgraph dev
 ```
+
+**For Demo (SQLite Persistence):**
+```bash
+langgraph up
+```
+
+The server will start at:
+- **API**: http://localhost:8123
+- **Studio UI**: http://localhost:8123 (built-in chat interface)
+
+## 🎯 Demo: Career Transition Advisor
+
+This project showcases a **Career Transition Advisor** - a compelling demo that demonstrates LangGraph v1's memory and state management features through a real-world use case.
+
+### What It Does
+
+The Career Advisor helps professionals navigate career transitions by:
+- **Understanding context**: Captures background, skills, and goals through conversation
+- **Real-time research**: Uses Firecrawl to search job markets, requirements, and learning resources
+- **Skills gap analysis**: Compares current skills with target role requirements
+- **Personalized guidance**: Creates tailored learning paths and job targets
+- **Persistent memory**: Maintains full context across multiple conversation turns within a thread
+
+### Why It's Compelling
+
+1. **Universal Appeal** - Everyone thinks about career growth and skill development
+2. **Emotional Resonance** - Career anxiety and uncertainty are widely relatable
+3. **Multi-turn Intelligence** - Showcases the power of persistent conversation memory
+4. **Practical Value** - Solves a real problem people face daily
+5. **Technical Showcase** - Demonstrates all key LangGraph v1 features elegantly
+
+### Demo Script
+
+See **[DEMO_CAREER.md](DEMO_CAREER.md)** for the complete 10-minute demo script with:
+- Pre-demo checklist
+- Turn-by-turn conversation flow with expected behaviors
+- What to highlight at each step
+- LangGraph Studio UI walkthrough
+- Thread isolation demonstration
+- Troubleshooting common issues
+- Q&A preparation
+
+### Quick Demo Example
+
+```
+Turn 1: "I'm Sarah, a Python developer with 5 years experience, wanting to transition into AI/ML"
+→ Agent: Acknowledges background, begins building relationship
+
+Turn 2: "What skills am I missing?"
+→ Agent: Searches job requirements, analyzes skills gap, leverages Python as foundation
+
+Turn 3: "Find me courses for those skills"
+→ Agent: Remembers specific skills from Turn 2, finds relevant learning resources
+
+Turn 4: "What jobs can I target in 6 months?"
+→ Agent: Synthesizes full conversation context, suggests realistic targets
+
+Thread Isolation Test:
+→ New thread: "What's my name?" → "I don't have that information"
+→ Original thread: "What's my name?" → "You're Sarah, the Python developer..."
+```
+
+### Key Features Demonstrated
+
+- **MessagesState** - LangGraph v1's prebuilt state class (no custom classes needed)
+- **tools_condition** - Automatic routing (replaces 18 lines of custom logic)
+- **Platform Persistence** - Thread-based memory managed by LangGraph CLI
+- **Async Patterns** - Better I/O performance with ainvoke()
+- **MCP Integration** - Standardized tool protocol with Firecrawl
+
+### Alternative Demo: Short-Term Memory Research Assistant
+
+For a simpler, generic research demo, see below.
+
+### Example Conversation Flow
+
+Here's how to demonstrate the memory features:
+
+**Turn 1: Set Context**
+```
+User: "My name is Alex and I'm interested in electric vehicles"
+Agent: "Nice to meet you, Alex! I'd be happy to help you learn about electric vehicles..."
+```
+
+**Turn 2: Follow-up (Uses Memory)**
+```
+User: "What are the top 3 options?"
+Agent: [Searches for electric vehicles, remembers Alex is interested in EVs]
+```
+
+**Turn 3: Deep Dive (Uses Full Context)**
+```
+User: "Which one is best for long road trips?"
+Agent: [Analyzes previous search results, considers Alex's needs, provides recommendation]
+```
+
+**Turn 4: New Thread Test**
+```
+User: [In a new thread] "What's my name?"
+Agent: "I don't have that information yet..."
+[Demonstrates thread isolation - each conversation has separate memory]
+```
+
+### Memory Features Demonstrated
+
+1. **Conversation Continuity** - Agent remembers what was discussed
+2. **Thread Isolation** - Each conversation thread has separate memory
+3. **Persistence** - Memory survives server restarts (with `langgraph up`)
+4. **State Inspection** - View full conversation history in Studio UI
 
 ## What You'll Learn
 
-1. **LangChain v1 Architecture** - Modern agent patterns with `create_agent()`
-2. **MCP Integration** - Direct tool access without wrapper functions
-3. **Agentic AI Principles** - Let LLMs reason, use tools for external data only
-4. **vLLM Deployment** - Fast inference on GPU infrastructure
-5. **Multi-step Reasoning** - Autonomous planning and execution
-
-## Notebook Structure
-
-1. **Setup** - Install dependencies and load environment
-2. **Connect to MCP** - Get Firecrawl tools for web scraping
-3. **Initialize vLLM** - Connect to RunPod endpoint
-4. **Build Agent** - Create LangChain v1 agent with direct tool access
-5. **Live Demos** - Progressive complexity demonstrations
-
-## Demo Scenarios
-
-**Demo 1: Simple Job Search**
-- Agent constructs URL and scrapes job listings
-
-**Demo 2: Multi-step Reasoning**
-- Agent searches jobs, analyzes fit, recommends best match
-
-**Demo 3: Full Autonomous Workflow**
-- Agent finds jobs, scores resume, writes cover letter
+1. **LangGraph State Machines** - Building agents with StateGraph
+2. **Checkpointing** - SQLite-based persistent memory
+3. **Multi-turn Reasoning** - Context-aware conversations
+4. **MCP Integration** - Direct tool access for web search/scraping
+5. **Production Deployment** - API + UI with LangGraph CLI
 
 ## Requirements
 
 - Python 3.10+
-- Jupyter Notebook
+- Node.js (for npx/Firecrawl MCP)
 - Firecrawl API key (get free at [firecrawl.dev](https://www.firecrawl.dev/))
 - RunPod account with GPU credits
 
-## Deployment Options
+## Understanding Memory Modes
 
-### For Presentations (Recommended):
-- Use RunPod pre-deployed pod
-- Quick setup: 5 minutes
-- Cost: ~$0.29/hr (A4000 spot instance)
+### Development Mode: `langgraph dev`
+- **Memory**: Platform-managed (in-memory runtime)
+- **Persistence**: In-memory only (lost on restart)
+- **Reload**: Hot reload on code changes
+- **Use case**: Development and testing
+- **Pros**: Fast iteration, no setup required
+- **Cons**: Memory doesn't persist across restarts
 
-### For Production:
-- Custom Docker image with model baked in
-- Zero cold start time
-- See [DEPLOYMENT.md](DEPLOYMENT.md)
+### Production Mode: `langgraph up`
+- **Memory**: Platform-managed (can configure PostgreSQL)
+- **Persistence**: Configurable via `POSTGRES_URI` environment variable
+- **Reload**: Manual restart required
+- **Use case**: Demos and production deployments
+- **Pros**: Persistent memory, production-ready
+- **Cons**: No hot reload
+
+### Standalone Mode: `python main.py`
+- **Memory**: Custom SQLite checkpointer
+- **Persistence**: SQLite database (`checkpoints.db`)
+- **Use case**: Testing without server, educational purposes
+- **Note**: This mode is for understanding the code structure. Use server modes for actual demos.
+
+**Important**: When using LangGraph CLI (`langgraph dev` or `langgraph up`), the platform automatically handles persistence. The code detects this and disables the custom checkpointer to avoid conflicts.
+
+### When to Use Each
+
+**Use `langgraph dev` when:**
+- Actively developing/debugging
+- Making code changes frequently
+- Memory persistence not needed
+
+**Use `langgraph up` when:**
+- Giving a demo
+- Need to show persistent memory
+- Testing production behavior
+- Want conversation history across restarts
 
 ## Project Structure
 
 ```
 langchain-vllm/
-├── lanchain-vllm.ipynb    # Workshop notebook
+├── main.py                 # LangGraph agent with SQLite memory
+├── langgraph.json          # LangGraph CLI configuration
 ├── requirements.txt        # Python dependencies
-├── .env.example           # Environment template
-├── Dockerfile             # RunPod deployment
-├── start_vllm.sh          # vLLM startup script
-├── DEPLOYMENT.md          # Deployment guide
-└── README.md              # This file
+├── .env                    # Environment variables (API keys)
+├── checkpoints.db          # SQLite memory database (generated)
+├── start_vllm.sh           # vLLM startup script
+└── README.md               # This file
 ```
 
 ## Troubleshooting
 
+**Memory not persisting?**
+- Make sure you're using `langgraph up` (not `langgraph dev`)
+- Check that `checkpoints.db` file is created in the project directory
+- Verify the same `thread_id` is used across requests
+
 **Model loading slow?**
-- First request takes 2-3 minutes to load model
-- Pre-warm the endpoint before presentations
+- First request takes 2-3 minutes to load model into vLLM
+- Pre-warm the endpoint before presentations with a test query
 
-**Firecrawl timeouts?**
-- Default timeout is 60 seconds
-- Some job sites take longer to scrape
-- Use simpler sites for demos
+**Firecrawl search errors?**
+- If you see "sources parameter validation failed", this is expected - the system prompt instructs the LLM to avoid using the `sources` parameter
+- Verify `FIRECRAWL_API_KEY` is set in `.env`
+- Check that Node.js is installed (required for `npx`)
+- Ensure `npx -y firecrawl-mcp` can run manually
 
-**Out of memory?**
-- Reduce `GPU_MEMORY_UTILIZATION` to 0.85
-- Use A5000 or better GPU
-- Enable quantization if needed
+**Tools not working?**
+- Verify all required environment variables are set in `.env`
+- Check that Node.js is installed (required for `npx`)
+- Review the server logs for any MCP connection errors
+
+**Server not starting?**
+- Verify all dependencies installed: `uv pip install -r requirements.txt`
+- Check port 8123 is not already in use
+- Look for errors in the console output
 
 ## Resources
 
-- [LangChain v1 Documentation](https://python.langchain.com/)
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- [LangGraph Memory Guide](https://langchain-ai.github.io/langgraph/concepts/persistence/)
+- [LangGraph CLI Documentation](https://langchain-ai.github.io/langgraph/concepts/langgraph_cli/)
 - [vLLM Documentation](https://docs.vllm.ai/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [Firecrawl MCP Server](https://github.com/mendableai/firecrawl-mcp)

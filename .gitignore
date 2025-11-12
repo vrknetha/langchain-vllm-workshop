@@ -38,7 +38,18 @@ uv.lock
 .python-version
 .mcp.json
 
+# LangGraph checkpoints (SQLite database)
+checkpoints.db
+checkpoints.db-shm
+checkpoints.db-wal
+
 # Documentation drafts
 prd.md
 implementation_plan.md
 DEPLOYMENT.md
+
+# External repos cloned into this project
+agent-chat-ui/
+
+# LangGraph API runtime
+.langgraph_api/
