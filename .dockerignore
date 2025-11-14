@@ -1,34 +1,42 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.venv/
-venv/
-env/
+# Ignore node_modules and other dependency directories
+node_modules
+bower_components
+vendor
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.swp
 
-# Environment
+# Ignore .env files and other environment files
 .env
-.env.local
+.env.*
+*.local
 
-# Git
-.git/
+# Ignore git-related files
+.git
 .gitignore
 
-# Documentation
-README.md
-implementation_plan.md
-prd.md
+# Ignore Docker-related files and configs
+.dockerignore
+docker-compose.yml
 
-# Config
-.mcp.json
-.python-version
+# Ignore build and cache directories
+dist
+build
+.cache
+__pycache__
 
-# Dependencies
-uv.lock
-pyproject.toml
+# Ignore IDE and editor configurations
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace
+.DS_Store  # macOS-specific
+
+# Ignore test and coverage files
+coverage
+*.coverage
+*.test.js
+*.spec.js
+tests

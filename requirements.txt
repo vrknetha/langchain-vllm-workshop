@@ -10,7 +10,10 @@ langchain-mcp-adapters>=0.1.12
 # LangGraph Core and Server (v1.0+)
 langgraph>=1.0.0
 langgraph-cli[inmem]>=0.1.0
-langgraph-checkpoint-sqlite>=3.0.0
+langgraph-checkpoint-postgres>=2.0.0
+
+# PostgreSQL driver with async support and connection pooling
+psycopg[binary,pool]>=3.0.0
 
 # Additional dependencies
 requests>=2.31.0

@@ -1,0 +1,33 @@
+volumes:
+  postgres_data:
+    driver: local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: langchain-postgres
+    environment:
+      POSTGRES_USER: langchain
+      POSTGRES_PASSWORD: langchain_dev_password
+      POSTGRES_DB: langchain_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langchain -d langchain_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:6
+    container_name: langchain-redis
+    healthcheck:
+      test: redis-cli ping
+      interval: 5s
+      timeout: 1s
+      retries: 5
+    restart: unless-stopped

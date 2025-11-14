@@ -32,6 +32,7 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+.langgraph_api/
 
 # Project specific
 uv.lock

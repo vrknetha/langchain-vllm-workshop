@@ -1,20 +1,21 @@
-# LangGraph + vLLM: Research Assistant with Memory
+# LangGraph + vLLM: Career Advisor with PostgreSQL Memory
 
-An intelligent research assistant built with LangGraph, featuring persistent short-term memory powered by SQLite and vLLM inference.
+An intelligent career transition advisor built with LangGraph, featuring production-ready persistent memory powered by PostgreSQL and vLLM inference.
 
 ## Overview
 
 This project demonstrates a stateful AI agent with conversation memory:
-- **Persistent Memory** - Platform-managed persistence with configurable backends
-- **Multi-turn Reasoning** - Maintains context across conversation turns
+- **PostgreSQL Persistence** - Production-ready conversation storage with AsyncPostgresSaver
+- **Multi-turn Reasoning** - Maintains context across conversation turns and server restarts
 - **Web Research Tools** - Search and scrape capabilities via Firecrawl MCP
 - **Live API + Chat UI** - Built-in LangGraph Studio interface
-- **Production-ready** - vLLM backend for fast inference
+- **Production-ready** - vLLM backend for fast inference + PostgreSQL for scalable persistence
 
 ## Key Technologies
 
 - **LangGraph** - State machine framework with built-in memory
-- **Platform-managed Persistence** - Automatic conversation storage
+- **PostgreSQL** - Production-grade persistent conversation storage
+- **AsyncPostgresSaver** - Async checkpointer with connection pooling
 - **vLLM** - Fast LLM inference on GPUs (4-24x faster than HuggingFace)
 - **Hermes-2-Pro-Mistral-7B** - 7B parameter model with excellent tool calling
 - **Firecrawl MCP** - Production web scraping via Model Context Protocol
@@ -25,15 +26,20 @@ This project demonstrates a stateful AI agent with conversation memory:
 ```
 User Query → LangGraph Agent → [Memory Check] → vLLM + Tools → Response
                                       ↓
-                              SQLite Checkpointer
-                              (Persistent Memory)
+                            PostgreSQL Checkpointer
+                            (Persistent Memory)
+                                      ↓
+                            Docker Container
+                            (postgres:16-alpine)
 ```
 
 **Key Features:**
-- **Stateful Conversations** - Every message is saved with platform persistence
+- **Stateful Conversations** - Every message is saved in PostgreSQL
 - **Thread-based Memory** - Multiple concurrent conversations with separate memory
+- **Persistent Across Restarts** - Conversation history survives server restarts
 - **Multi-turn Reasoning** - Agent remembers context from previous turns
 - **Tool Integration** - Web search and scraping via Firecrawl MCP
+- **Auto-table Creation** - Database schema created automatically on first run
 
 ## Quick Start
 
@@ -44,7 +50,23 @@ git clone <your-repo-url>
 cd langchain-vllm
 ```
 
-### 2. Install Dependencies
+### 2. Start PostgreSQL Database
+
+```bash
+# Start PostgreSQL in Docker
+docker-compose up -d
+
+# Verify it's running
+docker-compose ps
+```
+
+This creates a PostgreSQL 16 container with:
+- Database: `langchain_db`
+- User: `langchain`
+- Port: `5432`
+- Persistent volume: `postgres_data`
+
+### 3. Install Dependencies
 
 ```bash
 uv pip install -r requirements.txt
@@ -55,14 +77,20 @@ Or with pip:
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment
+### 4. Configure Environment
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys and RunPod endpoint
+# Edit .env with your API keys, RunPod endpoint, and PostgreSQL credentials
 ```
 
-### 4. Deploy vLLM on RunPod
+Required variables:
+- `FIRECRAWL_API_KEY` - Get from [firecrawl.dev](https://www.firecrawl.dev/)
+- `RUNPOD_ENDPOINT_URL` - Your RunPod vLLM endpoint
+- `RUNPOD_API_KEY` - Your RunPod API key
+- `POSTGRES_PASSWORD` - Set to `langchain_dev_password` (matches docker-compose.yml)
+
+### 5. Deploy vLLM on RunPod
 
 **Option A: Use Pre-built Docker Image (Fastest):**
 
@@ -74,28 +102,47 @@ cp .env.example .env
 6. Deploy and wait for startup
 7. Copy the endpoint URL to `.env`
 
-**Option B: Manual Setup:**
-1. Deploy a RunPod pod with PyTorch template
-2. SSH in and run `./start_vllm.sh`
-3. Copy the endpoint URL to `.env`
+**Option B: Build Custom Image:**
+```bash
+# Build vLLM Docker image
+docker build -f Dockerfile.vllm -t your-dockerhub-username/vllm-hermes:latest .
+
+# Push to Docker Hub
+docker push your-dockerhub-username/vllm-hermes:latest
+
+# Deploy on RunPod using your custom image
+```
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 
-### 5. Start the LangGraph Server
+### 6. Start the LangGraph Server
 
-**For Development (In-Memory, Hot Reload):**
+**For Development (Hot Reload, In-Memory):**
 ```bash
-langgraph dev
+langgraph dev --port 2024
+# Uses in-memory storage, conversation history lost on restart
 ```
 
-**For Demo (SQLite Persistence):**
+**For Production (PostgreSQL Persistence):**
 ```bash
-langgraph up
+langgraph up --port 2024
+# Reads POSTGRES_URI from .env automatically
+# Conversation history persists across restarts
 ```
 
-The server will start at:
-- **API**: http://localhost:8123
-- **Studio UI**: http://localhost:8123 (built-in chat interface)
+**Alternative (explicit postgres-uri):**
+```bash
+langgraph up --port 2024 --postgres-uri "postgresql://langchain:langchain_dev_password@localhost:5432/langchain_db"
+```
+
+Both modes now use PostgreSQL for persistence. The server will start at:
+- **API**: http://localhost:2024
+- **Studio UI**: http://localhost:2024 (built-in chat interface)
+
+On first run, the agent automatically creates PostgreSQL tables:
+- `checkpoints` - Conversation state snapshots
+- `checkpoint_blobs` - Large binary data
+- `checkpoint_writes` - Checkpoint write operations
 
 ## 🎯 Demo: Career Transition Advisor
 
@@ -208,6 +255,7 @@ Agent: "I don't have that information yet..."
 ## Requirements
 
 - Python 3.10+
+- Docker & Docker Compose (for PostgreSQL database)
 - Node.js (for npx/Firecrawl MCP)
 - Firecrawl API key (get free at [firecrawl.dev](https://www.firecrawl.dev/))
 - RunPod account with GPU credits
@@ -215,65 +263,117 @@ Agent: "I don't have that information yet..."
 ## Understanding Memory Modes
 
 ### Development Mode: `langgraph dev`
-- **Memory**: Platform-managed (in-memory runtime)
-- **Persistence**: In-memory only (lost on restart)
+- **Memory**: In-memory storage (langgraph_runtime_inmem)
+- **Persistence**: NOT persistent - conversation history lost on restart
 - **Reload**: Hot reload on code changes
+- **Use case**: Fast development iteration
+
+### Production Mode: `langgraph up --postgres-uri`
+- **Memory**: PostgreSQL checkpointer
+- **Persistence**: Survives server restarts (stored in PostgreSQL)
+- **Reload**: Requires rebuild for code changes
 - **Use case**: Development and testing
-- **Pros**: Fast iteration, no setup required
-- **Cons**: Memory doesn't persist across restarts
+- **Pros**: Fast iteration + persistent memory
+- **Requires**: PostgreSQL running (`docker-compose up -d`)
 
 ### Production Mode: `langgraph up`
-- **Memory**: Platform-managed (can configure PostgreSQL)
-- **Persistence**: Configurable via `POSTGRES_URI` environment variable
+- **Memory**: PostgreSQL checkpointer
+- **Persistence**: Full production persistence in PostgreSQL
 - **Reload**: Manual restart required
-- **Use case**: Demos and production deployments
-- **Pros**: Persistent memory, production-ready
-- **Cons**: No hot reload
+- **Use case**: Production deployments and demos
+- **Pros**: Production-ready with persistent memory
+- **Requires**: PostgreSQL running (`docker-compose up -d`)
 
-### Standalone Mode: `python main.py`
-- **Memory**: Custom SQLite checkpointer
-- **Persistence**: SQLite database (`checkpoints.db`)
-- **Use case**: Testing without server, educational purposes
-- **Note**: This mode is for understanding the code structure. Use server modes for actual demos.
+### Standalone Mode: `python src/agent.py`
+- **Memory**: PostgreSQL checkpointer
+- **Persistence**: PostgreSQL database
+- **Use case**: Testing agent initialization and table creation
+- **Note**: This mode initializes the agent and displays configuration info
+- **Requires**: PostgreSQL running (`docker-compose up -d`)
 
-**Important**: When using LangGraph CLI (`langgraph dev` or `langgraph up`), the platform automatically handles persistence. The code detects this and disables the custom checkpointer to avoid conflicts.
+### Database Management
 
-### When to Use Each
+**View conversation history:**
+```bash
+docker exec -it langchain-postgres psql -U langchain -d langchain_db
 
-**Use `langgraph dev` when:**
-- Actively developing/debugging
-- Making code changes frequently
-- Memory persistence not needed
+# List tables
+\dt
 
-**Use `langgraph up` when:**
-- Giving a demo
-- Need to show persistent memory
-- Testing production behavior
-- Want conversation history across restarts
+# View checkpoints
+SELECT thread_id, checkpoint_id FROM checkpoints;
+
+# Exit
+\q
+```
+
+**Reset all conversations:**
+```bash
+docker-compose down -v  # Removes volumes
+docker-compose up -d    # Fresh database
+```
+
+**Stop PostgreSQL:**
+```bash
+docker-compose down  # Data persists in volume
+```
 
 ## Project Structure
 
 ```
 langchain-vllm/
-├── main.py                 # LangGraph agent with SQLite memory
+├── src/
+│   └── career_advisor/     # LangGraph agent package
+│       ├── __init__.py     # Package exports
+│       ├── config.py       # Configuration management
+│       ├── checkpointer.py # PostgreSQL persistence
+│       ├── tools.py        # MCP tools setup
+│       ├── prompts.py      # System prompts
+│       ├── nodes.py        # Graph nodes
+│       └── agent.py        # Graph construction
+├── docker-compose.yml      # PostgreSQL database configuration
 ├── langgraph.json          # LangGraph CLI configuration
-├── requirements.txt        # Python dependencies
-├── .env                    # Environment variables (API keys)
-├── checkpoints.db          # SQLite memory database (generated)
+├── requirements.txt        # Python dependencies (includes postgres libs)
+├── .env                    # Environment variables (API keys + DB config)
 ├── start_vllm.sh           # vLLM startup script
 └── README.md               # This file
 ```
 
 ## Troubleshooting
 
+### PostgreSQL Issues
+
+**"POSTGRES_PASSWORD environment variable is required"**
+- Copy `.env.example` to `.env`
+- Set `POSTGRES_PASSWORD=langchain_dev_password`
+
+**Connection refused to localhost:5432**
+- Start PostgreSQL: `docker-compose up -d`
+- Check status: `docker-compose ps`
+- View logs: `docker-compose logs -f postgres`
+
+**"relation 'checkpoints' does not exist"**
+- Tables are auto-created on first run via `checkpointer.setup()`
+- Verify agent initialized successfully
+- Check logs for PostgreSQL permissions issues
+
 **Memory not persisting?**
-- Make sure you're using `langgraph up` (not `langgraph dev`)
-- Check that `checkpoints.db` file is created in the project directory
+- PostgreSQL must be running (`docker-compose up -d`)
 - Verify the same `thread_id` is used across requests
+- Check PostgreSQL tables exist: `docker exec -it langchain-postgres psql -U langchain -d langchain_db -c "\dt"`
+
+### vLLM Issues
 
 **Model loading slow?**
 - First request takes 2-3 minutes to load model into vLLM
 - Pre-warm the endpoint before presentations with a test query
+
+**"Model does not exist" 404 error**
+- Check model name matches in `src/agent.py` and vLLM server
+- Verify vLLM has finished loading (2-3 minutes)
+- Test: `curl https://your-pod-8000.proxy.runpod.net/v1/models`
+
+### MCP/Tools Issues
 
 **Firecrawl search errors?**
 - If you see "sources parameter validation failed", this is expected - the system prompt instructs the LLM to avoid using the `sources` parameter
@@ -286,8 +386,11 @@ langchain-vllm/
 - Check that Node.js is installed (required for `npx`)
 - Review the server logs for any MCP connection errors
 
+### Server Issues
+
 **Server not starting?**
 - Verify all dependencies installed: `uv pip install -r requirements.txt`
+- Ensure PostgreSQL is running: `docker-compose ps`
 - Check port 8123 is not already in use
 - Look for errors in the console output
 

@@ -1,7 +1,8 @@
 {
+  "python_version": "3.13",
   "dependencies": ["."],
   "graphs": {
-    "agent": "./main.py:agent"
+    "agent": "src.career_advisor.agent:agent"
   },
   "env": ".env"
 }

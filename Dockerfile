@@ -1,29 +1,26 @@
-# RunPod vLLM Deployment - Hermes-2-Pro-Mistral-7B
-FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+FROM langchain/langgraph-api:3.13
 
-# Install vLLM and dependencies
-RUN pip install --no-cache-dir \
-    vllm \
-    requests \
-    python-dotenv
 
-# Set working directory
-WORKDIR /workspace
 
-# Copy startup script
-COPY start_vllm.sh /workspace/start_vllm.sh
-RUN chmod +x /workspace/start_vllm.sh
+# -- Adding local package . --
+ADD . /deps/langchain-vllm
+# -- End of local package . --
 
-# Environment variables for vLLM
-ENV MODEL_NAME="NousResearch/Hermes-2-Pro-Mistral-7B"
-ENV HOST="0.0.0.0"
-ENV PORT="8000"
-ENV GPU_MEMORY_UTILIZATION="0.95"
-ENV MAX_MODEL_LEN="4096"
-ENV TENSOR_PARALLEL_SIZE="1"
+# -- Installing all local dependencies --
+RUN for dep in /deps/*; do             echo "Installing $dep";             if [ -d "$dep" ]; then                 echo "Installing $dep";                 (cd "$dep" && PYTHONDONTWRITEBYTECODE=1 uv pip install --system --no-cache-dir -c /api/constraints.txt -e .);             fi;         done
+# -- End of local dependencies install --
+ENV LANGSERVE_GRAPHS='{"agent": "/deps/langchain-vllm/src/career_advisor/agent.py:agent"}'
 
-# Expose port
-EXPOSE 8000
 
-# Start vLLM server
-CMD ["/workspace/start_vllm.sh"]
+
+# -- Ensure user deps didn't inadvertently overwrite langgraph-api
+RUN mkdir -p /api/langgraph_api /api/langgraph_runtime /api/langgraph_license && touch /api/langgraph_api/__init__.py /api/langgraph_runtime/__init__.py /api/langgraph_license/__init__.py
+RUN PYTHONDONTWRITEBYTECODE=1 uv pip install --system --no-cache-dir --no-deps -e /api
+# -- End of ensuring user deps didn't inadvertently overwrite langgraph-api --
+# -- Removing build deps from the final image ~<:===~~~ --
+RUN pip uninstall -y pip setuptools wheel
+RUN rm -rf /usr/local/lib/python*/site-packages/pip* /usr/local/lib/python*/site-packages/setuptools* /usr/local/lib/python*/site-packages/wheel* && find /usr/local/bin -name "pip*" -delete || true
+RUN rm -rf /usr/lib/python*/site-packages/pip* /usr/lib/python*/site-packages/setuptools* /usr/lib/python*/site-packages/wheel* && find /usr/bin -name "pip*" -delete || true
+RUN uv pip uninstall --system pip setuptools wheel && rm /usr/bin/uv /usr/bin/uvx
+
+WORKDIR /deps/langchain-vllm
