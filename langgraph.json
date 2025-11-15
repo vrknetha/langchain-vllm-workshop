@@ -4,5 +4,9 @@
   "graphs": {
     "agent": "src.career_advisor.agent:agent"
   },
-  "env": ".env"
+  "env": ".env",
+  "dockerfile_lines": [
+    "USER root",
+    "RUN apt-get update && apt-get install -y curl gnupg ca-certificates && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs && rm -rf /var/lib/apt/lists/*"
+  ]
 }
